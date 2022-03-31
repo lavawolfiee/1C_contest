@@ -1,11 +1,26 @@
 #include "SuffixAutomaton.h"
+#include <fstream>
 
-SuffixAutomaton::SuffixAutomaton(const std::string &s) {
-  nodes.emplace_back();
+SuffixAutomaton::SuffixAutomaton(const std::string& s,
+                                 std::shared_ptr<NodesContainer> nodes_)
+    : nodes(std::move(nodes_)) {
+  nodes->Reserve(s.size());
+  nodes->AddNode();
   *this += s;
 }
 
-SuffixAutomaton &SuffixAutomaton::operator+=(const std::string &to_add) {
+SuffixAutomaton::SuffixAutomaton(std::ifstream& file,
+                                 std::shared_ptr<NodesContainer> nodes_)
+    : nodes(std::move(nodes_)) {
+  nodes->AddNode();
+
+  char c;
+  while (file.get(c)) {
+    *this += c;
+  }
+}
+
+SuffixAutomaton& SuffixAutomaton::operator+=(const std::string& to_add) {
   for (char c : to_add) {
     *this += c;
   }
@@ -13,79 +28,62 @@ SuffixAutomaton &SuffixAutomaton::operator+=(const std::string &to_add) {
   return *this;
 }
 
-SuffixAutomaton &SuffixAutomaton::operator+=(char c) {
+SuffixAutomaton& SuffixAutomaton::operator+=(char c) {
   s += c;
 
-  nodes.emplace_back();
-  std::size_t curr = static_cast<std::size_t>(nodes.size()) - 1; // [Sc]
-  nodes[curr].SetLen(nodes[last].GetLen() + 1);
-  nodes[curr].SetFirstPosEnd(nodes[curr].GetLen() - 1);
-  std::optional<std::size_t> p = last;
+  NodePtr curr = nodes->AddNode();  // [Sc]
+  nodes->SetLen(curr, nodes->GetLen(last) + 1);
+  nodes->SetFirstPosEnd(curr, nodes->GetLen(curr) - 1);
+  std::optional<NodePtr> p = last;
   last = curr;
 
-  while (p && !nodes[*p].HasEdge(c)) {
-    nodes[*p].SetEdge(c, curr);
-    p = nodes[*p].GoByLink();
+  while (p && !nodes->HasEdge(*p, c)) {
+    nodes->SetEdge(*p, c, curr);
+    p = nodes->GoByLink(*p);
   }
 
   if (!p) {
-    nodes[curr].SetLink(0);
+    nodes->SetLink(curr, 0);
   } else {
-    std::size_t q = nodes[*p].Go(c);
+    NodePtr q = nodes->Go(*p, c);
 
-    if (nodes[q].GetLen() == nodes[*p].GetLen() + 1) {
-      nodes[curr].SetLink(q);
+    if (nodes->GetLen(q) == nodes->GetLen(*p) + 1) {
+      nodes->SetLink(curr, q);
     } else {
-      nodes.push_back(nodes[q]);
-      std::size_t clone = static_cast<std::size_t>(nodes.size()) - 1;
-      nodes[clone].SetLen(nodes[*p].GetLen() + 1);
-      nodes[clone].SetFirstPosEnd(nodes[q].GetFirstPosEnd());
+      NodePtr clone = nodes->AddNode(q);
+      nodes->SetLen(clone, nodes->GetLen(*p) + 1);
+      nodes->SetFirstPosEnd(clone, nodes->GetFirstPosEnd(q));
 
-      while (p && nodes[*p].Go(c) == q) {
-        nodes[*p].SetEdge(c, clone);
-        p = nodes[*p].GoByLink();
+      while (p && nodes->Go(*p, c) == q) {
+        nodes->SetEdge(*p, c, clone);
+        p = nodes->GoByLink(*p);
       }
 
-      nodes[q].SetLink(clone);
-      nodes[curr].SetLink(clone);
+      nodes->SetLink(q, clone);
+      nodes->SetLink(curr, clone);
     }
   }
 
   return *this;
 }
 
-std::optional<std::size_t> SuffixAutomaton::FindFirstOccurrencePos(const std::string &pattern) const {
-  std::size_t v = 0;
+std::optional<std::size_t> SuffixAutomaton::FindFirstOccurrencePos(
+    const std::string& pattern) const {
+  NodePtr v = 0;
 
   for (char c : pattern) {
-    if (!nodes[v].HasEdge(c))
-      return std::nullopt;
+    if (!nodes->HasEdge(v, c)) return std::nullopt;
 
-    v = nodes[v].Go(c);
+    v = nodes->Go(v, c);
   }
 
-  return nodes[v].GetFirstOccurrence(pattern.size());
+  return nodes->GetFirstOccurrence(v, pattern.size());
 }
 
-std::optional<std::string> SuffixAutomaton::FindFirstOccurrenceContext(const std::string &pattern,
-                                                                       std::size_t before,
-                                                                       std::size_t after) const {
-  std::optional<std::size_t> pos = FindFirstOccurrencePos(pattern);
-
-  if (!pos) {
-    return std::nullopt;
-  }
-
-  ssize_t start_pos = std::max<ssize_t>(0, static_cast<ssize_t>(*pos) - before);
+std::string SuffixAutomaton::GetFirstOccurrenceContext(
+    std::size_t index, const std::string& pattern, std::size_t before,
+    std::size_t after) const {
+  ssize_t start_pos =
+      std::max<ssize_t>(0, static_cast<ssize_t>(index) - before);
   return s.substr(start_pos, pattern.size() + before + after);
-}
-
-std::size_t SuffixAutomaton::Node::Go(char c) const {
-  auto it = to.find(c);
-
-  if (it == to.end()) {
-    throw std::runtime_error("Can't go by char " + std::to_string(c));
-  }
-
-  return it->second;
 }
