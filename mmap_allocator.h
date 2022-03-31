@@ -48,6 +48,7 @@ MmapAllocator<T>::MmapAllocator(char* filename, std::size_t file_size)
     : length(file_size) {
   int fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0777);
   ptr = mmap(0, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  close(fd);
 }
 
 template <typename T>
