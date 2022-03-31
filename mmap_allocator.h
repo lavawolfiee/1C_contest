@@ -55,3 +55,11 @@ template <typename T>
 MmapAllocator<T>::~MmapAllocator() {
   munmap(ptr, length);
 }
+
+template <typename T>
+T* MmapAllocator<T>::allocate(std::size_t n) {
+  return nullptr;
+}
+
+template <typename T>
+void MmapAllocator<T>::deallocate(T* ptr, std::size_t n) {}
