@@ -9,24 +9,32 @@ using std::chrono::duration;
 using std::chrono::duration_cast;
 
 int main() {
-  auto start = std::chrono::steady_clock::now();
+  std::cout << "Do you want to use [1] RAM memory (default) or [2] File "
+               "(external memory)? ";
+  int option;
+  std::cin >> option;
+
+  std::shared_ptr<NodesContainer> nodes_container;
+
+  if (2 == option) {
+    std::cout << "Building suffix automaton in File (external memory). ";
+    nodes_container = std::make_shared<FileNodesContainer>(false);
+  } else {
+    std::cout << "Building suffix automaton in RAM memory. ";
+    nodes_container = std::make_shared<MemoryNodesContainer>();
+  }
+
+  std::cout << "Wait a little bit, please..." << std::endl;
 
   std::ifstream file("../tests/War&Peace.txt");
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  file.close();
 
+  auto start = std::chrono::steady_clock::now();
+  SuffixAutomaton suffix_automaton(file, std::move(nodes_container));
   auto end = std::chrono::steady_clock::now();
 
+  file.close();
+
   std::cout.precision(4);
-  std::cout << "File was read in "
-            << duration<double, std::milli>(end - start).count() << "ms"
-            << std::endl;
-
-  start = std::chrono::steady_clock::now();
-  SuffixAutomaton suffix_automaton(buffer.str());
-  end = std::chrono::steady_clock::now();
-
   std::cout << "Automaton was built in "
             << duration<double>(end - start).count() << "s" << std::endl;
 

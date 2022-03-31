@@ -70,7 +70,11 @@ void MemoryNodesContainer::Reserve(std::size_t size) { nodes.reserve(size); }
 MemoryNodesContainer::MemoryNodesContainer(std::size_t size) {
   nodes.reserve(size);
 }
-FileNodesContainer::FileNodesContainer(std::size_t size) {
+
+FileNodesContainer::FileNodesContainer(std::size_t size,
+                                       const std::string& filename,
+                                       std::size_t file_size)
+    : allocator(filename.c_str(), file_size), nodes(allocator) {
   nodes.reserve(size);
 }
 
@@ -85,8 +89,7 @@ NodesContainer::NodePtr FileNodesContainer::AddNode(
   return nodes.size() - 1;
 }
 
-std::size_t FileNodesContainer::Go(NodesContainer::NodePtr node,
-                                     char c) const {
+std::size_t FileNodesContainer::Go(NodesContainer::NodePtr node, char c) const {
   auto it = nodes[node].to.find(c);
 
   if (it == nodes[node].to.end()) {
@@ -120,22 +123,21 @@ std::size_t FileNodesContainer::GetFirstPosEnd(
 }
 
 void FileNodesContainer::SetEdge(NodesContainer::NodePtr node, char c,
-                                   std::size_t v) {
+                                 std::size_t v) {
   nodes[node].to[c] = v;
 }
 
-void FileNodesContainer::SetLink(NodesContainer::NodePtr node,
-                                   std::size_t v) {
+void FileNodesContainer::SetLink(NodesContainer::NodePtr node, std::size_t v) {
   nodes[node].link = v;
 }
 
 void FileNodesContainer::SetLen(NodesContainer::NodePtr node,
-                                  std::size_t new_len) {
+                                std::size_t new_len) {
   nodes[node].len = new_len;
 }
 
 void FileNodesContainer::SetFirstPosEnd(NodesContainer::NodePtr node,
-                                          std::size_t pos) {
+                                        std::size_t pos) {
   nodes[node].first_pos_end = pos;
 }
 

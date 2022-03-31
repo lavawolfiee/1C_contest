@@ -66,9 +66,10 @@ class MemoryNodesContainer : public NodesContainer {
 // uses MmapAllocator to allocate everything in file
 class FileNodesContainer : public NodesContainer {
  private:
+#pragma pack(push, 1)
   struct Node {
    public:
-    Node(const MmapAllocator<Node>& alloc) : to(alloc) {};
+    Node(const MmapAllocator<Node>& alloc) : to(alloc){};
 
     std::unordered_map<char, std::size_t, std::hash<char>, std::equal_to<>,
                        MmapAllocator<std::pair<char, std::size_t>>>
@@ -78,9 +79,13 @@ class FileNodesContainer : public NodesContainer {
                                      // the first occurrence
     std::optional<std::size_t> link{std::nullopt};
   };
+#pragma pack(pop)
 
  public:
-  explicit FileNodesContainer(std::size_t size = 0);
+  explicit FileNodesContainer(std::size_t size = 1024,
+                              const std::string& filename = "automaton.swap",
+                              std::size_t file_size = 3ll * 1024ll * 1024ll *
+                                                      1024ll);  // 3 GB
 
   std::size_t Go(NodePtr node, char c) const override;
   std::optional<std::size_t> GoByLink(NodePtr node) const override;

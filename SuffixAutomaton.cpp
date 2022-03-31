@@ -15,8 +15,11 @@ SuffixAutomaton::SuffixAutomaton(std::ifstream& file,
   nodes->AddNode();
 
   char c;
+  std::size_t i = 0;
+
   while (file.get(c)) {
     *this += c;
+    ++i;
   }
 }
 
